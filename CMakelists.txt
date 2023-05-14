@@ -1,0 +1,36 @@
+cmake_minimum_required(VERSION 3.10)
+
+# Set the project name
+project(PropertyTree)
+
+# Specify the C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Add googletest as a subdirectory
+add_subdirectory(deps/googletest-main)
+
+# Add flatbuffers as a subdirectory
+add_subdirectory(deps/flatbuffers-master)
+
+include_directories(${PROJECT_SOURCE_DIR}/deps/googletest-main/googletest/include)
+
+enable_testing()
+# Add executable
+add_executable(PropertyTree main.cpp)
+
+# Link the executable to the FlatBuffers library and googletest
+target_link_libraries(PropertyTree PRIVATE flatbuffers gtest gtest_main)
+
+# Add test executable
+add_executable(
+    test_property_tree
+    tests/test_property_tree.cpp
+)
+
+# Link the test executable to googletest
+target_link_libraries(test_property_tree PRIVATE gtest gtest_main)
+
+
+# Add test
+add_test(NAME test_property_tree COMMAND test_property_tree)
