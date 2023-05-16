@@ -68,14 +68,26 @@ struct PropertyValue FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   int32_t int_value() const {
     return GetField<int32_t>(VT_INT_VALUE, 0);
   }
+  bool mutate_int_value(int32_t _int_value = 0) {
+    return SetField<int32_t>(VT_INT_VALUE, _int_value, 0);
+  }
   float float_value() const {
     return GetField<float>(VT_FLOAT_VALUE, 0.0f);
+  }
+  bool mutate_float_value(float _float_value = 0.0f) {
+    return SetField<float>(VT_FLOAT_VALUE, _float_value, 0.0f);
   }
   const ::flatbuffers::String *string_value() const {
     return GetPointer<const ::flatbuffers::String *>(VT_STRING_VALUE);
   }
+  ::flatbuffers::String *mutable_string_value() {
+    return GetPointer<::flatbuffers::String *>(VT_STRING_VALUE);
+  }
   bool bool_value() const {
     return GetField<uint8_t>(VT_BOOL_VALUE, 0) != 0;
+  }
+  bool mutate_bool_value(bool _bool_value = 0) {
+    return SetField<uint8_t>(VT_BOOL_VALUE, static_cast<uint8_t>(_bool_value), 0);
   }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -155,14 +167,26 @@ struct Property FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   const ::flatbuffers::String *name() const {
     return GetPointer<const ::flatbuffers::String *>(VT_NAME);
   }
+  ::flatbuffers::String *mutable_name() {
+    return GetPointer<::flatbuffers::String *>(VT_NAME);
+  }
   PropertyTree::Type type() const {
     return static_cast<PropertyTree::Type>(GetField<int8_t>(VT_TYPE, 0));
+  }
+  bool mutate_type(PropertyTree::Type _type = static_cast<PropertyTree::Type>(0)) {
+    return SetField<int8_t>(VT_TYPE, static_cast<int8_t>(_type), 0);
   }
   const PropertyTree::PropertyValue *value() const {
     return GetPointer<const PropertyTree::PropertyValue *>(VT_VALUE);
   }
+  PropertyTree::PropertyValue *mutable_value() {
+    return GetPointer<PropertyTree::PropertyValue *>(VT_VALUE);
+  }
   const ::flatbuffers::Vector<::flatbuffers::Offset<PropertyTree::Property>> *sub_properties() const {
     return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<PropertyTree::Property>> *>(VT_SUB_PROPERTIES);
+  }
+  ::flatbuffers::Vector<::flatbuffers::Offset<PropertyTree::Property>> *mutable_sub_properties() {
+    return GetPointer<::flatbuffers::Vector<::flatbuffers::Offset<PropertyTree::Property>> *>(VT_SUB_PROPERTIES);
   }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -241,6 +265,14 @@ inline const PropertyTree::Property *GetProperty(const void *buf) {
 
 inline const PropertyTree::Property *GetSizePrefixedProperty(const void *buf) {
   return ::flatbuffers::GetSizePrefixedRoot<PropertyTree::Property>(buf);
+}
+
+inline Property *GetMutableProperty(void *buf) {
+  return ::flatbuffers::GetMutableRoot<Property>(buf);
+}
+
+inline PropertyTree::Property *GetMutableSizePrefixedProperty(void *buf) {
+  return ::flatbuffers::GetMutableSizePrefixedRoot<PropertyTree::Property>(buf);
 }
 
 inline bool VerifyPropertyBuffer(

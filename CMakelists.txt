@@ -27,13 +27,13 @@ enable_testing()
 add_executable(PropertyTree main.cpp)
 
 # Link the executable to the FlatBuffers library and googletest
-target_link_libraries(PropertyTree PRIVATE flatbuffers gtest gtest_main)
+target_link_libraries(PropertyTree PRIVATE data_mgr flatbuffers gtest gtest_main)
 
 # Add test executable
 add_executable(
     test_property_tree
     tests/test_property_tree.cpp
-)
+        tests/utils.cpp)
 
 # Link the test executable to googletest
 target_link_libraries(test_property_tree PRIVATE gtest gtest_main)
