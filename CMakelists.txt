@@ -13,7 +13,14 @@ add_subdirectory(deps/googletest-main)
 # Add flatbuffers as a subdirectory
 add_subdirectory(deps/flatbuffers-master)
 
-include_directories(${PROJECT_SOURCE_DIR}/deps/googletest-main/googletest/include)
+add_subdirectory(src)
+
+include_directories(
+  ${PROJECT_SOURCE_DIR}/deps/googletest-main/googletest/include
+  ${PROJECT_SOURCE_DIR}/deps/flatbuffers-master/include
+  ${PROJECT_SOURCE_DIR}/src
+  ${PROJECT_SOURCE_DIR}/
+)
 
 enable_testing()
 # Add executable
