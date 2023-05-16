@@ -4,6 +4,8 @@
 #include "schema/property_generated.h"
 #include "flatbuffers/reflection.h"
 #include "utils.h"
+#include "tcp_server.h"
+#include "tcp_client.h"
 
 TEST(Task2, ReadData) {
     auto property_char = load_from_file();
@@ -40,4 +42,13 @@ TEST(Task2, UpdateData) {
 
     // After modified
     ASSERT_EQ(new_property->name()->str(), new_name);
+}
+
+TEST(Task3, SendNReceiveOverTCP) {
+    auto property_char = load_from_file();
+    auto server = std::make_shared<TcpServer>(8085);
+    server->start_server();
+    auto client = std::make_shared<TcpClient>();
+    ASSERT_TRUE(client->connect_to_server("127.0.0.1", 8085));
+    ASSERT_TRUE(client->send_buffer(property_char.data(),  property_char.size()));
 }

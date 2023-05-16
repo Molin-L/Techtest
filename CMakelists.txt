@@ -16,10 +16,10 @@ add_subdirectory(deps/flatbuffers-master)
 add_subdirectory(src)
 
 include_directories(
-  ${PROJECT_SOURCE_DIR}/deps/googletest-main/googletest/include
-  ${PROJECT_SOURCE_DIR}/deps/flatbuffers-master/include
-  ${PROJECT_SOURCE_DIR}/src
-  ${PROJECT_SOURCE_DIR}/
+        ${PROJECT_SOURCE_DIR}/deps/googletest-main/googletest/include
+        ${PROJECT_SOURCE_DIR}/deps/flatbuffers-master/include
+        ${PROJECT_SOURCE_DIR}/src
+        ${PROJECT_SOURCE_DIR}/
 )
 
 enable_testing()
@@ -27,7 +27,7 @@ enable_testing()
 add_executable(PropertyTree main.cpp)
 
 # Link the executable to the FlatBuffers library and googletest
-target_link_libraries(PropertyTree PRIVATE data_mgr flatbuffers gtest gtest_main)
+target_link_libraries(PropertyTree PRIVATE tcp_service flatbuffers gtest gtest_main)
 
 # Add test executable
 add_executable(
@@ -36,7 +36,7 @@ add_executable(
         tests/utils.cpp)
 
 # Link the test executable to googletest
-target_link_libraries(test_property_tree PRIVATE gtest gtest_main)
+target_link_libraries(test_property_tree PRIVATE gtest gtest_main tcp_service)
 
 
 # Add test
