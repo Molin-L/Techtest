@@ -14,13 +14,15 @@ public:
     TcpServer() = default;
 
     ~TcpServer();
-    explicit TcpServer(uint64_t port) : port_(port), server_fd_(0), client_fd_(0), is_running_(false) {}
+    explicit TcpServer(uint64_t port);
     void start_server();
+    void start_server_with_handler(void (*func)(char*, int));
     void stop();
 
 protected:
     void listen_for_client();
     void handle_client();
+    void (*handler)(char*, int) = nullptr;
 
 protected:
     uint64_t port_{};

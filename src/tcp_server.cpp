@@ -3,6 +3,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "tcp_server.h"
+#include "flatbuffers/flatbuffers.h"
+#include "flatbuffers/reflection.h"
 #include "schema/property_generated.h"
 
 void TcpServer::start_server() {
@@ -89,11 +91,8 @@ void TcpServer::handle_client() {
     int num_bytes;
 
     while ((num_bytes = recv(client_fd_, buffer, sizeof(buffer), 0)) > 0) {
-        auto property = PropertyTree::GetProperty(buffer);
-        if (property) {
-            std::cout << "Received property: " << property->name()->str() << std::endl;
-            break;
-        }
+        this->handler(buffer, num_bytes);
+        break;
     }
 
     if (num_bytes == 0) {
@@ -103,4 +102,19 @@ void TcpServer::handle_client() {
 
 TcpServer::~TcpServer() {
     stop();
+}
+
+void TcpServer::start_server_with_handler(void (*func)(char *, int)) {
+    this->handler = func;
+    return this->start_server();
+}
+
+TcpServer::TcpServer(uint64_t port) :  port_(port), is_running_(false),  server_fd_(0), client_fd_(0) {
+    this->handler = [](char *buffer, int len) {
+        auto property = PropertyTree::GetProperty(buffer);
+        if (property) {
+            std::cout << "Received property: " << property->name()->str() << std::endl;
+        }
+    };
+
 }

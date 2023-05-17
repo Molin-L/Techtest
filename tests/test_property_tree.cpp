@@ -1,11 +1,16 @@
 #include <gtest/gtest.h>
 #include <fstream>
 #include <filesystem>
+#include <thread>
 #include "schema/property_generated.h"
+#include "flatbuffers/reflection_generated.h"
+#include "flatbuffers/util.h"
+#include "flatbuffers/minireflect.h"
 #include "flatbuffers/reflection.h"
 #include "utils.h"
 #include "tcp_server.h"
 #include "tcp_client.h"
+#include "flatbuffers/idl.h"
 
 TEST(Task2, ReadData) {
     auto property_char = load_from_file();
@@ -48,6 +53,41 @@ TEST(Task3, SendNReceiveOverTCP) {
     auto property_char = load_from_file();
     auto server = std::make_shared<TcpServer>(8085);
     server->start_server();
+    auto client = std::make_shared<TcpClient>();
+    ASSERT_TRUE(client->connect_to_server("127.0.0.1", 8085));
+    ASSERT_TRUE(client->send_buffer(property_char.data(),  property_char.size()));
+}
+
+TEST(Task4, ReflectionToRead) {
+    auto property_char = load_from_file();
+    auto server = std::make_shared<TcpServer>(8085);
+    server->start_server_with_handler([](char* buffer, int len) {
+        std::string bfbsfile;
+        std::filesystem::path cwd = std::filesystem::current_path();
+        std::string bfbsfile_path = cwd.string().append("/../schema/property.bfbs");
+        ASSERT_TRUE(flatbuffers::LoadFile((bfbsfile_path).c_str(),
+                                          true, &bfbsfile));
+        flatbuffers::Verifier  verifier(reinterpret_cast<const uint8_t*>(bfbsfile.c_str()), bfbsfile.length());
+        ASSERT_EQ(PropertyTree::VerifyPropertyBuffer(verifier), true);
+        auto &schema = *reflection::GetSchema(bfbsfile.c_str());
+        auto root_table = schema.root_table();
+
+        auto obj = schema.objects();
+        ASSERT_TRUE(root_table);
+
+        ASSERT_EQ(root_table->name()->str(), "PropertyTree.Property");
+
+        auto &root = *flatbuffers::GetAnyRoot(reinterpret_cast<const uint8_t*>(buffer));
+        flatbuffers::FlatBufferBuilder schema_builder;
+
+        auto name_field_ptr = root_table->fields()->LookupByKey("name");
+        auto &name_field = *name_field_ptr;
+        ASSERT_EQ(flatbuffers::GetFieldS(root, name_field)->str(), "property_name");
+
+        auto value_field_ptr = root_table->fields()->LookupByKey("value");
+        auto &value_field = *value_field_ptr;
+        ASSERT_EQ(flatbuffers::GetFieldI<int>(root, value_field), 100);
+    });
     auto client = std::make_shared<TcpClient>();
     ASSERT_TRUE(client->connect_to_server("127.0.0.1", 8085));
     ASSERT_TRUE(client->send_buffer(property_char.data(),  property_char.size()));
