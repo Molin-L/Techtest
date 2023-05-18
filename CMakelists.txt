@@ -23,11 +23,6 @@ include_directories(
 )
 
 enable_testing()
-# Add executable
-add_executable(PropertyTree main.cpp)
-
-# Link the executable to the FlatBuffers library and googletest
-target_link_libraries(PropertyTree PRIVATE tcp_service flatbuffers gtest gtest_main)
 
 # Add test executable
 add_executable(

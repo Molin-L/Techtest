@@ -8,8 +8,8 @@
 #include "flatbuffers/minireflect.h"
 #include "flatbuffers/reflection.h"
 #include "utils.h"
-#include "tcp_server.h"
-#include "tcp_client.h"
+#include "tcp_service/tcp_server.h"
+#include "tcp_service/tcp_client.h"
 #include "flatbuffers/idl.h"
 
 TEST(Task2, ReadData) {
@@ -34,19 +34,47 @@ TEST(Task2, UpdateData) {
 
     // Before modified
     ASSERT_EQ(property->name()->str(), "property_name");
+    ASSERT_EQ(property->value()->int_value(), 42);
+    ASSERT_EQ(property->type(),  PropertyTree::Type_INT);
+    ASSERT_EQ(property->sub_properties()->size(), 2);
+    ASSERT_EQ(property->sub_properties()->Get(0)->name()->str(), "sub_property_1");
+    ASSERT_EQ(property->sub_properties()->Get(0)->value()->int_value(), 42);
+    ASSERT_EQ(property->sub_properties()->Get(0)->type(),  PropertyTree::Type_INT);
+    ASSERT_EQ(property->sub_properties()->Get(1)->name()->str(), "sub_property_2");
+    ASSERT_EQ(property->sub_properties()->Get(1)->value()->string_value()->str(), "Hello, World!");
+    ASSERT_EQ(property->sub_properties()->Get(1)->type(),  PropertyTree::Type_STRING);
 
 
-    flatbuffers::FlatBufferBuilder builder;
-    std::string new_name = "new name new name new name new name";
-    auto new_name_offset = builder.CreateString(new_name);
-    PropertyTree::PropertyBuilder my_property_builder(builder);
-    my_property_builder.add_name(new_name_offset);
-    auto new_property_table = my_property_builder.Finish();
-    builder.Finish(new_property_table);
-    auto new_property = PropertyTree::GetMutableProperty(builder.GetBufferPointer());
+    // Modify
+    // Scale data can be modified directly
+    auto mutable_property = PropertyTree::GetMutableProperty(property_char.data());
+    mutable_property->mutable_value()->mutate_int_value(11);
+    ASSERT_EQ(mutable_property->value()->int_value(), 11);
+
+    // As for string and vector, we need to use reflection to modify
+    std::string bfbsfile;
+    std::filesystem::path cwd = std::filesystem::current_path();
+    std::string bfbsfile_path = cwd.string().append("/../schema/property.bfbs");
+    ASSERT_TRUE(flatbuffers::LoadFile((bfbsfile_path).c_str(),
+                                      true, &bfbsfile));
+    flatbuffers::Verifier  verifier(reinterpret_cast<const uint8_t*>(bfbsfile.c_str()), bfbsfile.length());
+    ASSERT_EQ(PropertyTree::VerifyPropertyBuffer(verifier), true);
+    auto &schema = *reflection::GetSchema(bfbsfile.c_str());
+    auto root_table = schema.root_table();
+
+    std::vector<uint8_t> resizingbuf(property_char.begin(), property_char.end());
+
+    auto &name_field = *root_table->fields()->LookupByKey("name");
+    auto rroot = flatbuffers::piv(flatbuffers::GetAnyRoot(resizingbuf.data()),
+                                  resizingbuf);
+
+    SetString(schema, "property_name_new", GetFieldS(**rroot, name_field),
+              &resizingbuf);
+
+    auto new_property = PropertyTree::GetMutableProperty(resizingbuf.data());
 
     // After modified
-    ASSERT_EQ(new_property->name()->str(), new_name);
+    ASSERT_EQ(new_property->name()->str(), "property_name_new");
 }
 
 TEST(Task3, SendNReceiveOverTCP) {
