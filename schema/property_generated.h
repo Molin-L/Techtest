@@ -17,9 +17,11 @@ namespace PropertyTree {
 
 struct PropertyValue;
 struct PropertyValueBuilder;
+struct PropertyValueT;
 
 struct Property;
 struct PropertyBuilder;
+struct PropertyT;
 
 enum Type : int8_t {
   Type_INT = 0,
@@ -57,7 +59,16 @@ inline const char *EnumNameType(Type e) {
   return EnumNamesType()[index];
 }
 
+struct PropertyValueT : public ::flatbuffers::NativeTable {
+  typedef PropertyValue TableType;
+  int32_t int_value = 0;
+  float float_value = 0.0f;
+  std::string string_value{};
+  bool bool_value = false;
+};
+
 struct PropertyValue FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef PropertyValueT NativeTableType;
   typedef PropertyValueBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_INT_VALUE = 4,
@@ -98,6 +109,9 @@ struct PropertyValue FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyField<uint8_t>(verifier, VT_BOOL_VALUE, 1) &&
            verifier.EndTable();
   }
+  PropertyValueT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(PropertyValueT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<PropertyValue> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const PropertyValueT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 };
 
 struct PropertyValueBuilder {
@@ -156,7 +170,22 @@ inline ::flatbuffers::Offset<PropertyValue> CreatePropertyValueDirect(
       bool_value);
 }
 
+::flatbuffers::Offset<PropertyValue> CreatePropertyValue(::flatbuffers::FlatBufferBuilder &_fbb, const PropertyValueT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+struct PropertyT : public ::flatbuffers::NativeTable {
+  typedef Property TableType;
+  std::string name{};
+  PropertyTree::Type type = PropertyTree::Type_INT;
+  std::unique_ptr<PropertyTree::PropertyValueT> value{};
+  std::vector<std::unique_ptr<PropertyTree::PropertyT>> sub_properties{};
+  PropertyT() = default;
+  PropertyT(const PropertyT &o);
+  PropertyT(PropertyT&&) FLATBUFFERS_NOEXCEPT = default;
+  PropertyT &operator=(PropertyT o) FLATBUFFERS_NOEXCEPT;
+};
+
 struct Property FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef PropertyT NativeTableType;
   typedef PropertyBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_NAME = 4,
@@ -200,6 +229,9 @@ struct Property FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            verifier.VerifyVectorOfTables(sub_properties()) &&
            verifier.EndTable();
   }
+  PropertyT *UnPack(const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  void UnPackTo(PropertyT *_o, const ::flatbuffers::resolver_function_t *_resolver = nullptr) const;
+  static ::flatbuffers::Offset<Property> Pack(::flatbuffers::FlatBufferBuilder &_fbb, const PropertyT* _o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
 };
 
 struct PropertyBuilder {
@@ -259,6 +291,94 @@ inline ::flatbuffers::Offset<Property> CreatePropertyDirect(
       sub_properties__);
 }
 
+::flatbuffers::Offset<Property> CreateProperty(::flatbuffers::FlatBufferBuilder &_fbb, const PropertyT *_o, const ::flatbuffers::rehasher_function_t *_rehasher = nullptr);
+
+inline PropertyValueT *PropertyValue::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<PropertyValueT>(new PropertyValueT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void PropertyValue::UnPackTo(PropertyValueT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = int_value(); _o->int_value = _e; }
+  { auto _e = float_value(); _o->float_value = _e; }
+  { auto _e = string_value(); if (_e) _o->string_value = _e->str(); }
+  { auto _e = bool_value(); _o->bool_value = _e; }
+}
+
+inline ::flatbuffers::Offset<PropertyValue> PropertyValue::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const PropertyValueT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  return CreatePropertyValue(_fbb, _o, _rehasher);
+}
+
+inline ::flatbuffers::Offset<PropertyValue> CreatePropertyValue(::flatbuffers::FlatBufferBuilder &_fbb, const PropertyValueT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const PropertyValueT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _int_value = _o->int_value;
+  auto _float_value = _o->float_value;
+  auto _string_value = _o->string_value.empty() ? 0 : _fbb.CreateString(_o->string_value);
+  auto _bool_value = _o->bool_value;
+  return PropertyTree::CreatePropertyValue(
+      _fbb,
+      _int_value,
+      _float_value,
+      _string_value,
+      _bool_value);
+}
+
+inline PropertyT::PropertyT(const PropertyT &o)
+      : name(o.name),
+        type(o.type),
+        value((o.value) ? new PropertyTree::PropertyValueT(*o.value) : nullptr) {
+  sub_properties.reserve(o.sub_properties.size());
+  for (const auto &sub_properties_ : o.sub_properties) { sub_properties.emplace_back((sub_properties_) ? new PropertyTree::PropertyT(*sub_properties_) : nullptr); }
+}
+
+inline PropertyT &PropertyT::operator=(PropertyT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(name, o.name);
+  std::swap(type, o.type);
+  std::swap(value, o.value);
+  std::swap(sub_properties, o.sub_properties);
+  return *this;
+}
+
+inline PropertyT *Property::UnPack(const ::flatbuffers::resolver_function_t *_resolver) const {
+  auto _o = std::unique_ptr<PropertyT>(new PropertyT());
+  UnPackTo(_o.get(), _resolver);
+  return _o.release();
+}
+
+inline void Property::UnPackTo(PropertyT *_o, const ::flatbuffers::resolver_function_t *_resolver) const {
+  (void)_o;
+  (void)_resolver;
+  { auto _e = name(); if (_e) _o->name = _e->str(); }
+  { auto _e = type(); _o->type = _e; }
+  { auto _e = value(); if (_e) { if(_o->value) { _e->UnPackTo(_o->value.get(), _resolver); } else { _o->value = std::unique_ptr<PropertyTree::PropertyValueT>(_e->UnPack(_resolver)); } } else if (_o->value) { _o->value.reset(); } }
+  { auto _e = sub_properties(); if (_e) { _o->sub_properties.resize(_e->size()); for (::flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { if(_o->sub_properties[_i]) { _e->Get(_i)->UnPackTo(_o->sub_properties[_i].get(), _resolver); } else { _o->sub_properties[_i] = std::unique_ptr<PropertyTree::PropertyT>(_e->Get(_i)->UnPack(_resolver)); }; } } else { _o->sub_properties.resize(0); } }
+}
+
+inline ::flatbuffers::Offset<Property> Property::Pack(::flatbuffers::FlatBufferBuilder &_fbb, const PropertyT* _o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  return CreateProperty(_fbb, _o, _rehasher);
+}
+
+inline ::flatbuffers::Offset<Property> CreateProperty(::flatbuffers::FlatBufferBuilder &_fbb, const PropertyT *_o, const ::flatbuffers::rehasher_function_t *_rehasher) {
+  (void)_rehasher;
+  (void)_o;
+  struct _VectorArgs { ::flatbuffers::FlatBufferBuilder *__fbb; const PropertyT* __o; const ::flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _name = _o->name.empty() ? 0 : _fbb.CreateString(_o->name);
+  auto _type = _o->type;
+  auto _value = _o->value ? CreatePropertyValue(_fbb, _o->value.get(), _rehasher) : 0;
+  auto _sub_properties = _o->sub_properties.size() ? _fbb.CreateVector<::flatbuffers::Offset<PropertyTree::Property>> (_o->sub_properties.size(), [](size_t i, _VectorArgs *__va) { return CreateProperty(*__va->__fbb, __va->__o->sub_properties[i].get(), __va->__rehasher); }, &_va ) : 0;
+  return PropertyTree::CreateProperty(
+      _fbb,
+      _name,
+      _type,
+      _value,
+      _sub_properties);
+}
+
 inline const PropertyTree::Property *GetProperty(const void *buf) {
   return ::flatbuffers::GetRoot<PropertyTree::Property>(buf);
 }
@@ -295,6 +415,18 @@ inline void FinishSizePrefixedPropertyBuffer(
     ::flatbuffers::FlatBufferBuilder &fbb,
     ::flatbuffers::Offset<PropertyTree::Property> root) {
   fbb.FinishSizePrefixed(root);
+}
+
+inline std::unique_ptr<PropertyTree::PropertyT> UnPackProperty(
+    const void *buf,
+    const ::flatbuffers::resolver_function_t *res = nullptr) {
+  return std::unique_ptr<PropertyTree::PropertyT>(GetProperty(buf)->UnPack(res));
+}
+
+inline std::unique_ptr<PropertyTree::PropertyT> UnPackSizePrefixedProperty(
+    const void *buf,
+    const ::flatbuffers::resolver_function_t *res = nullptr) {
+  return std::unique_ptr<PropertyTree::PropertyT>(GetSizePrefixedProperty(buf)->UnPack(res));
 }
 
 }  // namespace PropertyTree

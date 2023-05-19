@@ -8,8 +8,8 @@
 #include "flatbuffers/minireflect.h"
 #include "flatbuffers/reflection.h"
 #include "utils.h"
-#include "tcp_service/tcp_server.h"
-#include "tcp_service/tcp_client.h"
+#include "tcp_service/tcp_conn.h"
+#include "property_tree/property_tree.h"
 #include "flatbuffers/idl.h"
 
 TEST(Task2, ReadData) {
@@ -17,14 +17,14 @@ TEST(Task2, ReadData) {
     auto property = PropertyTree::GetProperty(property_char.data());
     ASSERT_EQ(property->name()->str(), "property_name");
     ASSERT_EQ(property->value()->int_value(), 42);
-    ASSERT_EQ(property->type(),  PropertyTree::Type_INT);
+    ASSERT_EQ(property->type(), PropertyTree::Type_INT);
     ASSERT_EQ(property->sub_properties()->size(), 2);
     ASSERT_EQ(property->sub_properties()->Get(0)->name()->str(), "sub_property_1");
     ASSERT_EQ(property->sub_properties()->Get(0)->value()->int_value(), 42);
-    ASSERT_EQ(property->sub_properties()->Get(0)->type(),  PropertyTree::Type_INT);
+    ASSERT_EQ(property->sub_properties()->Get(0)->type(), PropertyTree::Type_INT);
     ASSERT_EQ(property->sub_properties()->Get(1)->name()->str(), "sub_property_2");
     ASSERT_EQ(property->sub_properties()->Get(1)->value()->string_value()->str(), "Hello, World!");
-    ASSERT_EQ(property->sub_properties()->Get(1)->type(),  PropertyTree::Type_STRING);
+    ASSERT_EQ(property->sub_properties()->Get(1)->type(), PropertyTree::Type_STRING);
 }
 
 TEST(Task2, UpdateData) {
@@ -35,14 +35,14 @@ TEST(Task2, UpdateData) {
     // Before modified
     ASSERT_EQ(property->name()->str(), "property_name");
     ASSERT_EQ(property->value()->int_value(), 42);
-    ASSERT_EQ(property->type(),  PropertyTree::Type_INT);
+    ASSERT_EQ(property->type(), PropertyTree::Type_INT);
     ASSERT_EQ(property->sub_properties()->size(), 2);
     ASSERT_EQ(property->sub_properties()->Get(0)->name()->str(), "sub_property_1");
     ASSERT_EQ(property->sub_properties()->Get(0)->value()->int_value(), 42);
-    ASSERT_EQ(property->sub_properties()->Get(0)->type(),  PropertyTree::Type_INT);
+    ASSERT_EQ(property->sub_properties()->Get(0)->type(), PropertyTree::Type_INT);
     ASSERT_EQ(property->sub_properties()->Get(1)->name()->str(), "sub_property_2");
     ASSERT_EQ(property->sub_properties()->Get(1)->value()->string_value()->str(), "Hello, World!");
-    ASSERT_EQ(property->sub_properties()->Get(1)->type(),  PropertyTree::Type_STRING);
+    ASSERT_EQ(property->sub_properties()->Get(1)->type(), PropertyTree::Type_STRING);
 
 
     // Modify
@@ -57,7 +57,7 @@ TEST(Task2, UpdateData) {
     std::string bfbsfile_path = cwd.string().append("/../schema/property.bfbs");
     ASSERT_TRUE(flatbuffers::LoadFile((bfbsfile_path).c_str(),
                                       true, &bfbsfile));
-    flatbuffers::Verifier  verifier(reinterpret_cast<const uint8_t*>(bfbsfile.c_str()), bfbsfile.length());
+    flatbuffers::Verifier verifier(reinterpret_cast<const uint8_t *>(bfbsfile.c_str()), bfbsfile.length());
     ASSERT_EQ(PropertyTree::VerifyPropertyBuffer(verifier), true);
     auto &schema = *reflection::GetSchema(bfbsfile.c_str());
     auto root_table = schema.root_table();
@@ -79,23 +79,23 @@ TEST(Task2, UpdateData) {
 
 TEST(Task3, SendNReceiveOverTCP) {
     auto property_char = load_from_file();
-    auto server = std::make_shared<TcpServer>(8085);
+    auto server = std::make_shared<TcpConn>(8085);
     server->start_server();
-    auto client = std::make_shared<TcpClient>();
-    ASSERT_TRUE(client->connect_to_server("127.0.0.1", 8085));
-    ASSERT_TRUE(client->send_buffer(property_char.data(),  property_char.size()));
+    auto client = std::make_shared<TcpConn>();
+    ASSERT_TRUE(client->connect_to("127.0.0.1", 8085));
+    ASSERT_TRUE(client->send_buffer(property_char.data(), property_char.size()));
 }
 
 TEST(Task4, ReflectionToRead) {
     auto property_char = load_from_file();
-    auto server = std::make_shared<TcpServer>(8085);
-    server->start_server_with_handler([](char* buffer, int len) {
+    auto server = std::make_shared<TcpConn>(8485);
+    server->start_server_with_handler([](char *buffer, int len) {
         std::string bfbsfile;
         std::filesystem::path cwd = std::filesystem::current_path();
         std::string bfbsfile_path = cwd.string().append("/../schema/property.bfbs");
         ASSERT_TRUE(flatbuffers::LoadFile((bfbsfile_path).c_str(),
                                           true, &bfbsfile));
-        flatbuffers::Verifier  verifier(reinterpret_cast<const uint8_t*>(bfbsfile.c_str()), bfbsfile.length());
+        flatbuffers::Verifier verifier(reinterpret_cast<const uint8_t *>(bfbsfile.c_str()), bfbsfile.length());
         ASSERT_EQ(PropertyTree::VerifyPropertyBuffer(verifier), true);
         auto &schema = *reflection::GetSchema(bfbsfile.c_str());
         auto root_table = schema.root_table();
@@ -105,7 +105,7 @@ TEST(Task4, ReflectionToRead) {
 
         ASSERT_EQ(root_table->name()->str(), "PropertyTree.Property");
 
-        auto &root = *flatbuffers::GetAnyRoot(reinterpret_cast<const uint8_t*>(buffer));
+        auto &root = *flatbuffers::GetAnyRoot(reinterpret_cast<const uint8_t *>(buffer));
         flatbuffers::FlatBufferBuilder schema_builder;
 
         auto name_field_ptr = root_table->fields()->LookupByKey("name");
@@ -116,7 +116,30 @@ TEST(Task4, ReflectionToRead) {
         auto &value_field = *value_field_ptr;
         ASSERT_EQ(flatbuffers::GetFieldI<int>(root, value_field), 100);
     });
-    auto client = std::make_shared<TcpClient>();
-    ASSERT_TRUE(client->connect_to_server("127.0.0.1", 8085));
-    ASSERT_TRUE(client->send_buffer(property_char.data(),  property_char.size()));
+    auto client = std::make_shared<TcpConn>();
+    ASSERT_TRUE(client->connect_to("127.0.0.1", 8485));
+    ASSERT_TRUE(client->send_buffer(property_char.data(), property_char.size()));
+}
+
+TEST(Task5, UpdatePropertyViaSubscription) {
+    auto test_data = load_from_file();
+    // Initialize sender
+    auto sender_helper = std::make_shared<PropertyTree::PropertyTreeHelper>(test_data.data(), test_data.size());
+    auto sender = PropertyTree::PropertyTreeMgr(sender_helper);
+    // Initialize receiver
+    auto receiver = PropertyTree::PropertyTreeMgr();
+
+    // Sender publish subscription
+    ASSERT_TRUE(sender.Publish());
+    // Receiver subscribe property
+    ASSERT_TRUE(receiver.Subscribe("127.0.0.1", 8545));
+    ASSERT_EQ(sender.subs.size(), 1);
+    sleep(1);
+    auto receiver_name = receiver.GetData()->GetProperty()->name()->str();
+    ASSERT_EQ(receiver_name, "Sender changed name");
+
+    sender.GetData()->SetName("Sender changed name");
+    sender.Finish();
+    receiver_name = receiver.GetData()->GetProperty()->name()->str();
+    ASSERT_EQ(receiver_name, "Sender changed name");
 }
